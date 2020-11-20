@@ -16,12 +16,10 @@ import shouldComponentUpdate from './updater';
 import GestureRecognizer, {swipeDirections} from 'react-native-swipe-gestures';
 import {SELECT_DATE_SLOT} from '../testIDs';
 
-//Fallback for react-native-web or when RN version is < 0.44
+
+//Fallback when RN version is < 0.44
 const {View, ViewPropTypes} = ReactNative;
-const viewPropTypes =
-  typeof document !== 'undefined'
-    ? PropTypes.shape({style: PropTypes.object})
-    : ViewPropTypes || View.propTypes;
+const viewPropTypes = ViewPropTypes || View.propTypes;
 const EmptyArray = [];
 
 /**
@@ -70,6 +68,7 @@ class Calendar extends Component {
     /** Provide custom day rendering component */
     dayComponent: PropTypes.any,
     /** Month format in calendar title. Formatting values: http://arshaw.com/xdate/#Formatting */
+    dayEvents:PropTypes.any, // Set event time
     monthFormat: PropTypes.string,
     /** Disables changing month when click on days of other months (when hideExtraDays is false). Default = false */
     disableMonthChange: PropTypes.bool,
@@ -97,8 +96,6 @@ class Calendar extends Component {
     disableAllTouchEventsForDisabledDays: PropTypes.bool,
     /** Replace default month and year title with custom one. the function receive a date as parameter. */
     renderHeader: PropTypes.any,
-    /** Allow rendering of a totally custom header */
-    customHeader: PropTypes.any,
     /** Enable the option to swipe between months. Default: false */
     enableSwipeMonths: PropTypes.bool
   };
@@ -219,6 +216,7 @@ class Calendar extends Component {
           date={dateAsObject}
           marking={this.getDateMarking(day)}
           accessibilityLabel={accessibilityLabel}
+          dayEvents={this.props.dayEvents[dateAsObject.dateString]}
           disableAllTouchEventsForDisabledDays={this.props.disableAllTouchEventsForDisabledDays}
         >
           {date}
@@ -289,8 +287,12 @@ class Calendar extends Component {
   }
 
   onSwipe = (gestureName) => {
-    const {SWIPE_UP, SWIPE_DOWN, SWIPE_LEFT, SWIPE_RIGHT} = swipeDirections;
+    const {enableSwipeMonths} = this.props;
+    if (!enableSwipeMonths) {
+      return;
+    }
 
+    const {SWIPE_UP, SWIPE_DOWN, SWIPE_LEFT, SWIPE_RIGHT} = swipeDirections;
     switch (gestureName) {
     case SWIPE_UP:
     case SWIPE_DOWN:
@@ -342,7 +344,7 @@ class Calendar extends Component {
 
   render() {
     const {currentMonth} = this.state;
-    const {firstDay, showSixWeeks, hideExtraDays, enableSwipeMonths} = this.props;
+    const {firstDay, showSixWeeks, hideExtraDays} = this.props;
     const shouldShowSixWeeks = showSixWeeks && !hideExtraDays;
     const days = dateutils.page(currentMonth, firstDay, shouldShowSixWeeks);
 
@@ -361,47 +363,41 @@ class Calendar extends Component {
       }
     }
 
-    const GestureComponent = enableSwipeMonths ? GestureRecognizer : View;
-    const gestureProps = enableSwipeMonths ? {onSwipe: (direction, state) => this.onSwipe(direction, state)} : {};
-
-    const headerProps = {
-      testID: this.props.testID,
-      ref: c => this.header = c,
-      style: this.props.headerStyle,
-      theme: this.props.theme,
-      hideArrows: this.props.hideArrows,
-      month: this.state.currentMonth,
-      addMonth: this.addMonth,
-      showIndicator: indicator,
-      firstDay: this.props.firstDay,
-      showSixWeeks: this.props.showSixWeeks,
-      renderArrow: this.props.renderArrow,
-      monthFormat: this.props.monthFormat,
-      hideDayNames: this.props.hideDayNames,
-      weekNumbers: this.props.showWeekNumbers,
-      onPressArrowLeft: this.props.onPressArrowLeft,
-      onPressArrowRight: this.props.onPressArrowRight,
-      webAriaLevel: this.props.webAriaLevel,
-      disableArrowLeft: this.props.disableArrowLeft,
-      disableArrowRight: this.props.disableArrowRight,
-      disabledDaysIndexes: this.props.disabledDaysIndexes,
-      renderHeader: this.props.renderHeader
-    };
-    const CustomHeader = this.props.customHeader;
     return (
-      <GestureComponent {...gestureProps}>
+      <GestureRecognizer
+        onSwipe={(direction, state) => this.onSwipe(direction, state)}
+      >
         <View
           style={[this.style.container, this.props.style]}
           accessibilityElementsHidden={this.props.accessibilityElementsHidden} // iOS
           importantForAccessibility={this.props.importantForAccessibility} // Android
         >
-          { CustomHeader
-            ? <CustomHeader {...headerProps}/>
-            : <CalendarHeader {...headerProps}/>
-          }
+          <CalendarHeader
+            testID={this.props.testID}
+            ref={c => this.header = c}
+            style={this.props.headerStyle}
+            theme={this.props.theme}
+            hideArrows={this.props.hideArrows}
+            month={this.state.currentMonth}
+            addMonth={this.addMonth}
+            showIndicator={indicator}
+            firstDay={this.props.firstDay}
+            showSixWeeks={this.props.showSixWeeks}
+            renderArrow={this.props.renderArrow}
+            monthFormat={this.props.monthFormat}
+            hideDayNames={this.props.hideDayNames}
+            weekNumbers={this.props.showWeekNumbers}
+            onPressArrowLeft={this.props.onPressArrowLeft}
+            onPressArrowRight={this.props.onPressArrowRight}
+            webAriaLevel={this.props.webAriaLevel}
+            disableArrowLeft={this.props.disableArrowLeft}
+            disableArrowRight={this.props.disableArrowRight}
+            disabledDaysIndexes={this.props.disabledDaysIndexes}
+            renderHeader={this.props.renderHeader}
+          />
           <View style={this.style.monthView}>{weeks}</View>
         </View>
-      </GestureComponent>
+      </GestureRecognizer>
     );
   }
 }
